@@ -6,7 +6,7 @@ package Main;
 
 /**
  *
- * @author Isabel
+ * @author Miguel, freya, abraham
  */
 public class Main {
 
