@@ -6,7 +6,7 @@ package Estructuras;
 
 /**
  *
- * @author adcd_
+ * @author Abraham Castillo
  */
 public class Lista <T> {
     private Nodo<T> cabeza;

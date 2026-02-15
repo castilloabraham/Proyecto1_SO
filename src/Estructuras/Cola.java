@@ -6,7 +6,7 @@ package Estructuras;
 
 /**
  *
- * @author Miguel, freya, abraham
+ * @author Abraham Castillo
  */
 public class Cola<T> {
     
