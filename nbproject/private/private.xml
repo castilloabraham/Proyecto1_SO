@@ -3,8 +3,15 @@
     <editor-bookmarks xmlns="http://www.netbeans.org/ns/editor-bookmarks/2" lastBookmarkId="0"/>
     <open-files xmlns="http://www.netbeans.org/ns/projectui-open-files/2">
         <group>
+<<<<<<< HEAD
             <file>file:/C:/Users/Isabel/Desktop/Miguel/UNIMET/Sistemas%20Operativos/ProyectoSimulacionSO/src/Politicas/General/RoundRobin.java</file>
             <file>file:/C:/Users/Isabel/Desktop/Miguel/UNIMET/Sistemas%20Operativos/ProyectoSimulacionSO/src/Main/Main.java</file>
+=======
+            <file>file:/C:/Users/adcd_/OneDrive/Documentos/NetBeansProjects/Proyecto1_SO/src/Politicas/TiempoReal/Proceso.java</file>
+            <file>file:/C:/Users/adcd_/OneDrive/Documentos/NetBeansProjects/Proyecto1_SO/src/Politicas/General/RoundRobin.java</file>
+            <file>file:/C:/Users/adcd_/OneDrive/Documentos/NetBeansProjects/Proyecto1_SO/src/Main/Main.java</file>
+            <file>file:/C:/Users/adcd_/OneDrive/Documentos/NetBeansProjects/Proyecto1_SO/src/Politicas/TiempoReal/PEP.java</file>
+>>>>>>> ed304b8fd6c4e113c22ab69d5f5c9949baa9e0b8
         </group>
     </open-files>
 </project-private>
