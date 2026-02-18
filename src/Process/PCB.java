@@ -6,7 +6,7 @@ package Process;
 
 /**
  *
- * @author Abraham Castillo
+ * @author Abraham Castillo y Freya Blanca
  */
 public class PCB {
     // ==================== IDENTIFICACIÓN ====================
@@ -28,7 +28,15 @@ public class PCB {
     
     // ==================== PLANIFICACIÓN Y TIEMPOS ====================
     
-    //Agregar freya
+    private int priority; //Prioridad del proceso 1 es la maxima
+    private int deadline; //Tiempo límite absoluto para completar el proceso
+    private int remainingDeadline; //Tiempo restante hasta el deadline
+    private int period; //Periodo del proceso
+    private int arrivalTime; //Ciclo en que el proceso entró al sistema
+    private int cpuTimeUsed; //Tiempo total de CPU usado por el proceso
+    private int remainingQuantum; //Quantum restante para algoritmos como Round Robin
+    private int waitingTime; //Tiempo de espera acumulado en colas
+    private int turnaroundTime; //Tiempo total desde llegada hasta terminación
     
     // ==================== FLAGS Y ESTADO ADICIONAL ====================
     
@@ -74,6 +82,63 @@ public class PCB {
         // Valores por defecto para E/S
         this.cyclesUntilIOException = 0;
         this.cyclesForIOCompletion = 0;
+    }
+    
+    /**
+     * Constructor principal del PCB.
+     * 
+     * @param processName Nombre descriptivo del proceso
+     * @param totalInstructions Número total de instrucciones
+     * @param instructionType Tipo de instrucciones (CPU o IO)
+     * @param priority Prioridad (1 = alta)
+     * @param deadline Deadline en ciclos de reloj
+     * @param processType Tipo de proceso (PERIODIC o APERIODIC)
+     * @param arrivalTime Ciclo de llegada al sistema
+     */
+    public PCB(String processName, int totalInstructions, InstructionType instructionType, int priority, int deadline, ProcessType processType, int arrivalTime) {
+        
+        // Generar ID único
+        this.processID = ProcessIDGenerator.getInstance().generateID();
+        
+        // Información básica
+        this.processName = processName;
+        this.totalInstructions = totalInstructions;
+        this.instructionType = instructionType;
+        this.priority = priority;
+        this.deadline = deadline;
+        this.remainingDeadline = deadline;
+        this.processType = processType;
+        this.arrivalTime = arrivalTime;
+        
+        // Estado inicial
+        this.currentState = ProcessState.NEW;
+        this.programCounter = 0;
+        this.memoryAddressRegister = 0;
+        
+        // Inicialización de contadores
+        this.cpuTimeUsed = 0;
+        this.waitingTime = 0;
+        this.turnaroundTime = 0;
+        this.remainingQuantum = 0;
+        this.currentIOCycles = 0;
+        
+        // Flags iniciales
+        this.isBlockedForIO = false;
+        this.missedDeadline = false;
+        this.isSuspended = false;
+        this.completionTime = -1;
+        
+        // Valores por defecto para E/S
+        this.cyclesUntilIOException = 0;
+        this.cyclesForIOCompletion = 0;
+        this.period = 0; // 0 indica no periódico
+    }
+    
+    /**
+     * Constructor simplificado para procesos de CPU puro.
+     */
+    public PCB(String processName, int totalInstructions, int priority, int deadline, int arrivalTime) {
+        this(processName, totalInstructions, InstructionType.CPU, priority, deadline, ProcessType.APERIODIC, arrivalTime);
     }
     
     
@@ -182,6 +247,78 @@ public class PCB {
 
     public void setIsSuspended(boolean isSuspended) {
         this.isSuspended = isSuspended;
+    }
+
+    public int getPriority() {
+        return priority;
+    }
+
+    public void setPriority(int priority) {
+        this.priority = priority;
+    }
+
+    public int getDeadline() {
+        return deadline;
+    }
+
+    public void setDeadline(int deadline) {
+        this.deadline = deadline;
+    }
+
+    public int getRemainingDeadline() {
+        return remainingDeadline;
+    }
+
+    public void setRemainingDeadline(int remainingDeadline) {
+        this.remainingDeadline = remainingDeadline;
+    }
+
+    public int getPeriod() {
+        return period;
+    }
+
+    public void setPeriod(int period) {
+        this.period = period;
+    }
+
+    public int getArrivalTime() {
+        return arrivalTime;
+    }
+
+    public void setArrivalTime(int arrivalTime) {
+        this.arrivalTime = arrivalTime;
+    }
+
+    public int getCpuTimeUsed() {
+        return cpuTimeUsed;
+    }
+
+    public void setCpuTimeUsed(int cpuTimeUsed) {
+        this.cpuTimeUsed = cpuTimeUsed;
+    }
+
+    public int getRemainingQuantum() {
+        return remainingQuantum;
+    }
+
+    public void setRemainingQuantum(int remainingQuantum) {
+        this.remainingQuantum = remainingQuantum;
+    }
+
+    public int getWaitingTime() {
+        return waitingTime;
+    }
+
+    public void setWaitingTime(int waitingTime) {
+        this.waitingTime = waitingTime;
+    }
+
+    public int getTurnaroundTime() {
+        return turnaroundTime;
+    }
+
+    public void setTurnaroundTime(int turnaroundTime) {
+        this.turnaroundTime = turnaroundTime;
     }
     
     
