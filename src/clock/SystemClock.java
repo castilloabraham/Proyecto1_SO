@@ -71,6 +71,7 @@ public class SystemClock extends Thread {
     private static SystemClock instance; //Instancia única del reloj (Singleton)
     
     
+    private static final int INITIAL_LISTENER_CAPACITY = 10;
     /**
      * Constructor (Singleton pattern).
      */
