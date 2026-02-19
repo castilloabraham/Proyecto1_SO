@@ -145,181 +145,50 @@ public class PCB {
     
     //getter y setter
 
-    public String getProcessName() {
-        return processName;
-    }
-
-    public void setProcessName(String processName) {
-        this.processName = processName;
-    }
-
-    public ProcessType getProcessType() {
-        return processType;
-    }
-
-    public void setProcessType(ProcessType processType) {
-        this.processType = processType;
-    }
-
-    public ProcessState getCurrentState() {
-        return currentState;
-    }
-
-    public void setCurrentState(ProcessState currentState) {
-        this.currentState = currentState;
-    }
-
-    public int getProgramCounter() {
-        return programCounter;
-    }
-
-    public void setProgramCounter(int programCounter) {
-        this.programCounter = programCounter;
-    }
-
-    public int getMemoryAddressRegister() {
-        return memoryAddressRegister;
-    }
-
-    public void setMemoryAddressRegister(int memoryAddressRegister) {
-        this.memoryAddressRegister = memoryAddressRegister;
-    }
-
-    public InstructionType getInstructionType() {
-        return instructionType;
-    }
-
-    public void setInstructionType(InstructionType instructionType) {
-        this.instructionType = instructionType;
-    }
-
-    public int getCyclesUntilIOException() {
-        return cyclesUntilIOException;
-    }
-
-    public void setCyclesUntilIOException(int cyclesUntilIOException) {
-        this.cyclesUntilIOException = cyclesUntilIOException;
-    }
-
-    public int getCyclesForIOCompletion() {
-        return cyclesForIOCompletion;
-    }
-
-    public void setCyclesForIOCompletion(int cyclesForIOCompletion) {
-        this.cyclesForIOCompletion = cyclesForIOCompletion;
-    }
-
-    public int getCurrentIOCycles() {
-        return currentIOCycles;
-    }
-
-    public void setCurrentIOCycles(int currentIOCycles) {
-        this.currentIOCycles = currentIOCycles;
-    }
-
-    public boolean isIsBlockedForIO() {
-        return isBlockedForIO;
-    }
-
-    public void setIsBlockedForIO(boolean isBlockedForIO) {
-        this.isBlockedForIO = isBlockedForIO;
-    }
-
-    public boolean isMissedDeadline() {
-        return missedDeadline;
-    }
-
-    public void setMissedDeadline(boolean missedDeadline) {
-        this.missedDeadline = missedDeadline;
-    }
-
-    public int getCompletionTime() {
-        return completionTime;
-    }
-
-    public void setCompletionTime(int completionTime) {
-        this.completionTime = completionTime;
-    }
-
-    public boolean isIsSuspended() {
-        return isSuspended;
-    }
-
-    public void setIsSuspended(boolean isSuspended) {
-        this.isSuspended = isSuspended;
-    }
-
-    public int getPriority() {
-        return priority;
-    }
-
-    public void setPriority(int priority) {
-        this.priority = priority;
-    }
-
-    public int getDeadline() {
-        return deadline;
-    }
-
-    public void setDeadline(int deadline) {
-        this.deadline = deadline;
-    }
-
-    public int getRemainingDeadline() {
-        return remainingDeadline;
-    }
-
-    public void setRemainingDeadline(int remainingDeadline) {
-        this.remainingDeadline = remainingDeadline;
-    }
-
-    public int getPeriod() {
-        return period;
-    }
-
-    public void setPeriod(int period) {
-        this.period = period;
-    }
-
-    public int getArrivalTime() {
-        return arrivalTime;
-    }
-
-    public void setArrivalTime(int arrivalTime) {
-        this.arrivalTime = arrivalTime;
-    }
-
-    public int getCpuTimeUsed() {
-        return cpuTimeUsed;
-    }
-
-    public void setCpuTimeUsed(int cpuTimeUsed) {
-        this.cpuTimeUsed = cpuTimeUsed;
-    }
-
-    public int getRemainingQuantum() {
-        return remainingQuantum;
-    }
-
-    public void setRemainingQuantum(int remainingQuantum) {
-        this.remainingQuantum = remainingQuantum;
-    }
-
-    public int getWaitingTime() {
-        return waitingTime;
-    }
-
-    public void setWaitingTime(int waitingTime) {
-        this.waitingTime = waitingTime;
-    }
-
-    public int getTurnaroundTime() {
-        return turnaroundTime;
-    }
-
-    public void setTurnaroundTime(int turnaroundTime) {
-        this.turnaroundTime = turnaroundTime;
-    }
+    public String getProcessName() {return processName;}
+    public void setProcessName(String processName) {this.processName = processName;}
+    public ProcessType getProcessType() {return processType;}
+    public void setProcessType(ProcessType processType) {this.processType = processType;}
+    public ProcessState getCurrentState() {return currentState;}
+    public void setCurrentState(ProcessState currentState) {this.currentState = currentState;}
+    public int getProgramCounter() {return programCounter;}
+    public void setProgramCounter(int programCounter) {this.programCounter = programCounter;}
+    public int getMemoryAddressRegister() {return memoryAddressRegister;}
+    public void setMemoryAddressRegister(int memoryAddressRegister) {this.memoryAddressRegister = memoryAddressRegister;}
+    public InstructionType getInstructionType() {return instructionType;}
+    public void setInstructionType(InstructionType instructionType) {this.instructionType = instructionType;}
+    public int getCyclesUntilIOException() {return cyclesUntilIOException;}
+    public void setCyclesUntilIOException(int cyclesUntilIOException) {this.cyclesUntilIOException = cyclesUntilIOException;}
+    public int getCyclesForIOCompletion() {return cyclesForIOCompletion;}
+    public void setCyclesForIOCompletion(int cyclesForIOCompletion) {this.cyclesForIOCompletion = cyclesForIOCompletion;}
+    public int getCurrentIOCycles() {return currentIOCycles;}
+    public void setCurrentIOCycles(int currentIOCycles) {this.currentIOCycles = currentIOCycles;}
+    public boolean isIsBlockedForIO() {return isBlockedForIO;}
+    public void setIsBlockedForIO(boolean isBlockedForIO) {this.isBlockedForIO = isBlockedForIO;}
+    public boolean isMissedDeadline() {return missedDeadline;}
+    public void setMissedDeadline(boolean missedDeadline) {this.missedDeadline = missedDeadline;}
+    public int getCompletionTime() {return completionTime;}
+    public void setCompletionTime(int completionTime) {this.completionTime = completionTime;}
+    public boolean isIsSuspended() {return isSuspended;}
+    public void setIsSuspended(boolean isSuspended) {this.isSuspended = isSuspended;}
+    public int getPriority() {return priority;}
+    public void setPriority(int priority) {this.priority = priority;}
+    public int getDeadline() {return deadline;}
+    public void setDeadline(int deadline) {this.deadline = deadline;}
+    public int getRemainingDeadline() {return remainingDeadline;}
+    public void setRemainingDeadline(int remainingDeadline) {this.remainingDeadline = remainingDeadline;}
+    public int getPeriod() {return period;}
+    public void setPeriod(int period) {this.period = period;}
+    public int getArrivalTime() {return arrivalTime;}
+    public void setArrivalTime(int arrivalTime) {this.arrivalTime = arrivalTime;}
+    public int getCpuTimeUsed() {return cpuTimeUsed;}
+    public void setCpuTimeUsed(int cpuTimeUsed) {this.cpuTimeUsed = cpuTimeUsed;}
+    public int getRemainingQuantum() {return remainingQuantum;}
+    public void setRemainingQuantum(int remainingQuantum) {this.remainingQuantum = remainingQuantum;}
+    public int getWaitingTime() {return waitingTime;}
+    public void setWaitingTime(int waitingTime) {this.waitingTime = waitingTime;}
+    public int getTurnaroundTime() {return turnaroundTime;}
+    public void setTurnaroundTime(int turnaroundTime) {this.turnaroundTime = turnaroundTime;}
     
     
     
