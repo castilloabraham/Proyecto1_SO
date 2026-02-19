@@ -6,10 +6,14 @@ package clock;
 
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
+import java.util.Comparator;
+
 
 /**
  *
  * @author Freya Blanca
+ * 
+ * Nota: Todas las medidas de tiempo estan en ms
  */
 public class SystemClock extends Thread {
     // Configuracion de velocidad
@@ -60,7 +64,7 @@ public class SystemClock extends Thread {
      * Lista de componentes suscritos al reloj
      * Sincronizada para evitar ConcurrentModificationException
      */
-    private ClockListener[] listeners; //FALTA CREAR LA CLASE CLOCKLISTENER
+    private ClockListener[] listeners;
     private int listenerCount;
     private final Object listenersLock; //Lock para sincronizar acceso a la lista de listeners
     
@@ -90,4 +94,101 @@ public class SystemClock extends Thread {
         setDaemon(true);
     }
     
+    
+    // Configuración del reloj y gestión de listeners
+    
+    /**
+     * Establece la duración del ciclo de reloj y valida que este dentro de los limites
+     * Puede cambiarse en tiempo real mientras el reloj corre.
+     * 
+     * @param durationMs Duración en milisegundos
+     * @return true si el cambio fue exitoso
+     */
+    public synchronized boolean setCycleDuration(int durationMs) {
+        if (durationMs < MIN_CYCLE_DURATION_MS || durationMs > MAX_CYCLE_DURATION_MS) {
+            System.err.println("[SystemClock] Duración inválida: " + durationMs + "ms (rango: " + MIN_CYCLE_DURATION_MS + "-" + MAX_CYCLE_DURATION_MS + "ms)");
+            return false;
+        }
+        this.cycleDurationMs = durationMs;
+        System.out.println("[SystemClock] Duración de ciclo cambiada a: " + durationMs + "ms");
+        return true;
+    }
+    
+    
+    
+    //Ciclo principal del reloj
+    
+    /** 
+     * Ejecuta indefinidamente hasta que se llame a stopClock():
+     * 1. Espera la duración del ciclo
+     * 2. Incrementa el contador
+     * 3. Notifica a todos los listeners
+     */
+    public void run() {
+        startTimeMs = System.currentTimeMillis();
+        System.out.println("[SystemClock] Reloj iniciado - Ciclo: " + currentCycle.get());
+        
+        while (!shouldStop.get()) {
+            try {
+                // Si está pausado, esperar
+                while (paused.get() && !shouldStop.get()) {
+                    Thread.sleep(100); // Check cada 100ms si se reanudó
+                }
+                
+                // Si se debe detener, salir
+                if (shouldStop.get()) {
+                    break;
+                }
+                
+                // Esperar la duración del ciclo
+                Thread.sleep(cycleDurationMs);
+                
+                // Incrementar ciclo
+                int cycle = currentCycle.incrementAndGet();
+                totalTicksExecuted++;
+                
+                // Notificar a todos los listeners
+                notifyListeners(cycle);
+                
+            } catch (InterruptedException e) {
+                System.err.println("[SystemClock] Hilo interrumpido: " + e.getMessage());
+                break;
+            } catch (Exception e) {
+                System.err.println("[SystemClock] Error en ciclo de reloj: " + e.getMessage());
+                e.printStackTrace();
+            }
+        }
+        
+        System.out.println("[SystemClock] Reloj detenido - Ciclos ejecutados: " + totalTicksExecuted);
+    }
+    
+    /**
+     * Notifica a todos los listeners del nuevo ciclo, estos se ejecutan en orden de prioridad.
+     * 
+     * @param cycle Ciclo actual
+     */
+    private void notifyListeners(int cycle) {
+        // Crear una copia del array actual para evitar modificaciones durante la iteración
+        ClockListener[] currentListeners;
+        int currentCount;
+
+        synchronized (listenersLock) {
+            // Hacer una copia de los listeners actuales
+            currentListeners = new ClockListener[listenerCount];
+            System.arraycopy(listeners, 0, currentListeners, 0, listenerCount);
+            currentCount = listenerCount;
+        }
+
+        // Notificar a cada listener (ya están ordenados por prioridad)
+        for (int i = 0; i < currentCount; i++) {
+            ClockListener listener = currentListeners[i];
+            if (listener != null) {
+                try {
+                    listener.onClockTick(cycle);
+                } catch (Exception e) {
+                    System.err.println("[SystemClock] Error en listener " + listener.getListenerName() + ": " + e.getMessage());
+                }
+            }
+        }
+    }
 }
