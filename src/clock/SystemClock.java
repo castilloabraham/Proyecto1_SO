@@ -191,4 +191,115 @@ public class SystemClock extends Thread {
             }
         }
     }
+    
+    
+    
+    // Control del reloj
+    
+    /**
+     * Inicia el reloj contando ciclos
+     */
+    public void startClock() {
+        if (running.compareAndSet(false, true)) {
+            shouldStop.set(false);
+            paused.set(false);
+            if (!isAlive()) {
+                start(); // Iniciar el hilo
+            }
+            System.out.println("SystemClock: Reloj iniciado");
+        }
+    }
+    
+    /**
+     * Pausa el reloj - ATENCION: no destruye el hilo
+     */
+    public void pauseClock() {
+        if (paused.compareAndSet(false, true)) {
+            int cycle = currentCycle.get();
+            
+            // Notificar a listeners
+            synchronized (listenersLock) {
+                for (ClockListener listener : listeners) {
+                    try {
+                        listener.onClockPaused(cycle);
+                    } catch (Exception e) {
+                        System.err.println("SystemClock: Error notificando pausa: " + e.getMessage());
+                    }
+                }
+            }
+            
+            System.out.println("SystemClock: Reloj pausado en ciclo: " + cycle);
+        }
+    }
+    
+    /**
+     * Reanuda el reloj después de una pausa.
+     */
+    public void resumeClock() {
+        if (paused.compareAndSet(true, false)) {
+            int cycle = currentCycle.get();
+            
+            // Notificar a listeners
+            synchronized (listenersLock) {
+                for (ClockListener listener : listeners) {
+                    try {
+                        listener.onClockResumed(cycle);
+                    } catch (Exception e) {
+                        System.err.println("SystemClock: Error notificando reanudación: " + e.getMessage());
+                    }
+                }
+            }
+            
+            System.out.println("SystemClock: Reloj reanudado desde ciclo: " + cycle);
+        }
+    }
+    
+    /**
+     * Detiene el reloj completamente (termina el hilo).
+     * Para reiniciar, se debe crear una nueva instancia.
+     */
+    public void stopClock() {
+        shouldStop.set(true);
+        running.set(false);
+        System.out.println("SystemClock: Deteniendo reloj...");
+        
+        // Interrumpir el hilo para salir de sleep()
+        if (isAlive()) {
+            interrupt();
+        }
+    }
+    
+    /**
+     * Reinicia el reloj (vuelve el ciclo a 0). Esto resetea todo el sistema.
+     */
+    public void resetClock() {
+        boolean wasRunning = running.get();
+        
+        // Pausar temporalmente
+        pauseClock();
+        
+        // Resetear contador
+        currentCycle.set(0);
+        totalTicksExecuted = 0;
+        
+        // Notificar reset a listeners
+        synchronized (listenersLock) {
+            for (ClockListener listener : listeners) {
+                try {
+                    listener.onClockReset();
+                } catch (Exception e) {
+                    System.err.println("SystemClock: Error notificando reset: " + e.getMessage());
+                }
+            }
+        }
+        
+        System.out.println("SystemClock: Reloj reiniciado");
+        
+        // Reanudar si estaba corriendo
+        if (wasRunning) {
+            resumeClock();
+        }
+    }
+    
+    
 }
