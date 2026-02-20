@@ -302,4 +302,186 @@ public class SystemClock extends Thread {
     }
     
     
+    // Gestion Listeners
+    
+    /**
+     * Registra un componente para recibir notificaciones del reloj.
+     * 
+     * @param listener Componente a registrar
+     * @return true si se registró exitosamente
+     */
+    public boolean addListener(ClockListener listener) {
+        if (listener == null) {
+            return false;
+        }
+        
+        synchronized (listenersLock) {
+            // Verificar si ya existe
+            for (int i = 0; i < listenerCount; i++) {
+                if (listeners[i] != null && listeners[i].equals(listener)) {
+                    return false;
+                }
+            }
+            
+            // Verificar si necesitamos expandir el array
+            if (listenerCount >= listeners.length) {
+                ClockListener[] newListeners = new ClockListener[listeners.length * 2];
+                System.arraycopy(listeners, 0, newListeners, 0, listeners.length);
+                listeners = newListeners;
+            }
+            
+            // Agregar el listener
+            listeners[listenerCount] = listener;
+            listenerCount++;
+            System.out.println("[SystemClock] Listener registrado: " + listener.getListenerName());
+            return true;
+        }
+    }
+    
+    /**
+     * Desregistra un componente
+     * 
+     * @param listener Componente a desregistrar
+     * @return true si se removió exitosamente
+     */
+    public boolean removeListener(ClockListener listener) {
+        synchronized (listenersLock) {
+            for (int i = 0; i < listenerCount; i++) {
+                if (listeners[i] != null && listeners[i].equals(listener)) {
+                    // Desplazar elementos
+                    for (int j = i; j < listenerCount - 1; j++) {
+                        listeners[j] = listeners[j + 1];
+                    }
+                    listeners[listenerCount - 1] = null;
+                    listenerCount--;
+                    System.out.println("[SystemClock] Listener removido: " + listener.getListenerName());
+                    return true;
+                }
+            }
+            return false;
+        }
+    }
+    
+    /**
+     * Obtiene la cantidad de listeners registrados.
+     * 
+     * @return Número de listeners
+     */
+    public int getListenerCount() {
+        synchronized (listenersLock) {
+            return listenerCount;
+        }
+    }
+    
+    /**
+     * Limpia todos los listeners.
+     */
+    public void clearListeners() {
+        synchronized (listenersLock) {
+            for (int i = 0; i < listenerCount; i++) {
+                listeners[i] = null;
+            }
+            listenerCount = 0;
+            System.out.println("[SystemClock] Todos los listeners removidos");
+        }
+    }
+    
+    // ==================== GETTERS Y ESTADO ====================
+    
+    /**
+     * Obtiene el ciclo actual del reloj
+     * 
+     * @return Ciclo actual (thread-safe)
+     */
+    public int getCurrentCycle() {
+        return currentCycle.get();
+    }
+    
+    /**
+     * Verifica si el reloj esta corriendo
+     * 
+     * @return true si está en ejecución
+     */
+    public boolean isRunning() {
+        return running.get() && !paused.get();
+    }
+    
+    /**
+     * Verifica si el reloj esta pausado
+     * 
+     * @return true si está pausado
+     */
+    public boolean isPaused() {
+        return paused.get();
+    }
+    
+    /*
+     * Obtiene el total de ticks ejecutados
+     * 
+     * @return Total de ticks
+     */
+    public long getTotalTicks() {
+        return totalTicksExecuted;
+    }
+    
+    /**
+     * Calcula el tiempo real transcurrido desde el inicio
+     * 
+     * @return Tiempo en milisegundos
+     */
+    public long getElapsedTimeMs() {
+        if (startTimeMs == 0) {
+            return 0;
+        }
+        return System.currentTimeMillis() - startTimeMs;
+    }
+    
+    /**
+     * Calcula la tasa de ticks por segundo (TPS)
+     * 
+     * @return Ticks por segundo
+     */
+    public double getTicksPerSecond() {
+        long elapsedMs = getElapsedTimeMs();
+        if (elapsedMs == 0) {
+            return 0;
+        }
+        return (totalTicksExecuted * 1000.0) / elapsedMs;
+    }
+    
+    // Info
+    
+    /**
+     * Obtiene informacion completa del estado del reloj
+     * 
+     * @return String con información detallada
+     */
+    public String getStatusInfo() {
+        return String.format(
+            "SystemClock Status:\n" +
+            "  Ciclo actual: %d\n" +
+            "  Estado: %s\n" +
+            "  Duración ciclo: %dms\n" +
+            "  Listeners: %d\n" +
+            "  Total ticks: %d\n" +
+            "  Tiempo transcurrido: %.2fs\n" +
+            "  TPS: %.2f",
+            currentCycle.get(),
+            isRunning() ? "CORRIENDO" : (isPaused() ? "PAUSADO" : "DETENIDO"),
+            cycleDurationMs,
+            getListenerCount(),
+            totalTicksExecuted,
+            getElapsedTimeMs() / 1000.0,
+            getTicksPerSecond()
+        );
+    }
+    
+    public String toString() {
+        return String.format("SystemClock[cycle=%d, running=%b, duration=%dms, listeners=%d]",
+                           currentCycle.get(), isRunning(), cycleDurationMs, getListenerCount());
+    }
+
+
+    
+    
 }
