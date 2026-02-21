@@ -12,7 +12,7 @@ import clock.ClockListener;
 import clock.ResourceManager;
 
 /**
- * @author Miguel / Fre[ya Blanca
+ * @author Miguel / Freya Blanca
  */
 public class EDF {
     

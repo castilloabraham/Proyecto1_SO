@@ -13,7 +13,7 @@ import clock.ClockListener;
 import clock.ResourceManager;
 
 /**
- * @author Miguel
+ * @author Miguel / Freya Blanca
  */
 public class FCFS {
     
