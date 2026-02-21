@@ -72,7 +72,7 @@ public class SystemClock extends Thread {
 
     private long startTimeMs; //Tiempo real cuando inició el reloj
     private long totalTicksExecuted; //Total de ticks ejecutados desde el inicio
-    private static SystemClock instance; //Instancia única del reloj (Singleton)
+    private static volatile SystemClock instance; //Instancia única del reloj (Singleton)
     
     
     private static final int INITIAL_LISTENER_CAPACITY = 10;
@@ -481,6 +481,23 @@ public class SystemClock extends Thread {
                            currentCycle.get(), isRunning(), cycleDurationMs, getListenerCount());
     }
 
+    public static SystemClock getInstance() {
+        if (instance == null) {
+            synchronized (SystemClock.class) {
+                if (instance == null) {
+                    instance = new SystemClock();
+                }
+            }
+        }
+        return instance;
+    }
+
+    public static synchronized void resetInstance() {
+        if (instance != null) {
+            instance.stopClock();
+            instance = null;
+        }
+    }
 
     
     
