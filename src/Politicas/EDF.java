@@ -14,7 +14,7 @@ import clock.ResourceManager;
 /**
  * @author Miguel / Freya Blanca
  */
-public class EDF {
+public class EDF implements ClockListener {
     
     
     private final Lista<PCB> readyList;

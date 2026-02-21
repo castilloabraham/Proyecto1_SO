@@ -14,7 +14,7 @@ import clock.ResourceManager;
 /**
  * @author Miguel //Freya Blanca
  */
-public class SRT {
+public class SRT implements ClockListener {
     
     private final Lista<PCB> readyList;
     private final Lista<PCB> blockedList;

@@ -15,7 +15,7 @@ import clock.ResourceManager;
 /**
  * @author Miguel / freya blanca
  */
-public class RoundRobin {
+public class RoundRobin implements ClockListener {
     
     private final Cola<PCB> readyQueue;
     private final Lista<PCB> blockedList;

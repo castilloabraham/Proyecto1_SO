@@ -15,7 +15,7 @@ import clock.ResourceManager;
 /**
  * @author Miguel / freya Blanca
  */
-public class PEP {
+public class PEP implements ClockListener {
     private final Lista<PCB> readyList;
     private final Lista<PCB> blockedList;
     private final Lista<PCB> terminatedList;

@@ -9,7 +9,7 @@ package Politicas;
  * y políticas de Prioridad.
  * * @author Miguel
  */
-public class Proceso {
+public class Proceso implements ClockListener {
     public String nombre;
     public int tiempoRafaga;    // Duración original de la tarea
     public int tiempoRestante;  // Lo que falta por ejecutar

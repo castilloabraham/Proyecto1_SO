@@ -15,7 +15,7 @@ import clock.ResourceManager;
 /**
  * @author Miguel / Freya Blanca
  */
-public class FCFS {
+public class FCFS implements ClockListener {
     
     private final Cola<PCB> readyQueue;
     private final Lista<PCB> blockedList;
