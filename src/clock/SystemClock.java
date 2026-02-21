@@ -481,6 +481,10 @@ public class SystemClock extends Thread {
                            currentCycle.get(), isRunning(), cycleDurationMs, getListenerCount());
     }
 
+    public static SystemClock getInstance() {
+        return instance;
+    }
+
 
     
     
