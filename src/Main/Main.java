@@ -4,6 +4,9 @@
  */
 package Main;
 
+import Interfaces.Ventana;
+import javax.swing.SwingUtilities;
+
 /**
  *
  * @author Miguel, Freya, Abraham
@@ -14,7 +17,10 @@ public class Main {
      * @param args the command line arguments
      */
     public static void main(String[] args) {
-        // TODO code application logic here
+        SwingUtilities.invokeLater(() -> {
+            Ventana ventana = new Ventana();
+            ventana.setVisible(true);
+        });
     }
     
 }

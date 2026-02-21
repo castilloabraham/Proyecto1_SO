@@ -5,14 +5,17 @@
 package Politicas;
 
 import Process.PCB;
+import Process.Mediumtermscheduler;
+import Process.ProcessState;
 import clock.SystemClock;
 import clock.ClockListener;
+import Estructuras.Nodo;
 
 /**
  *
  * @author Freaya Blanca
  */
-public class SchedulerManager implements MediumTermScheduler.SwapInCallback {
+public class SchedulerManager {
 
     public enum Policy {
         FCFS, ROUND_ROBIN, SRT, PEP, EDF
@@ -22,39 +25,34 @@ public class SchedulerManager implements MediumTermScheduler.SwapInCallback {
     private Policy activePolicy;
     private final SystemClock clock;
     private int quantum;
-
-    // Planificador de mediano plazo
-    private final MediumTermScheduler mts;
+    private final Mediumtermscheduler mts;
 
     // ===================== Constructor =====================
 
     public SchedulerManager(SystemClock clock) {
-        this(clock, 5); // 5 procesos en memoria por defecto
+        this(clock, 5);
     }
 
     public SchedulerManager(SystemClock clock, int maxProcessesInMemory) {
         this.clock   = clock;
         this.quantum = 3;
-        this.mts     = new MediumTermScheduler(this, maxProcessesInMemory);
 
-        // Registrar el MTS en el reloj (prioridad 5, corre antes que los schedulers)
+        // Crear MTS y darle referencia a este SchedulerManager
+        this.mts = new Mediumtermscheduler(maxProcessesInMemory);
+        this.mts.setSchedulerManager(this);
+
+        // Registrar MTS en el reloj (prioridad 5, antes que los schedulers)
         clock.addListener(mts);
 
-        // Política por defecto
         setPolicy(Policy.FCFS);
     }
 
     // ===================== Cambio de política =====================
 
-    /**
-     * Cambia la política de planificación en tiempo real.
-     * Desregistra el scheduler anterior del reloj y registra el nuevo.
-     */
     public void setPolicy(Policy policy) {
         if (activeScheduler != null) {
             clock.removeListener(activeScheduler);
         }
-
         switch (policy) {
             case FCFS:        activeScheduler = new FCFS();              break;
             case ROUND_ROBIN: activeScheduler = new RoundRobin(quantum); break;
@@ -63,43 +61,86 @@ public class SchedulerManager implements MediumTermScheduler.SwapInCallback {
             case EDF:         activeScheduler = new EDF();               break;
             default:          activeScheduler = new FCFS();
         }
-
         activePolicy = policy;
         clock.addListener(activeScheduler);
-        System.out.println("[SchedulerManager] Política activa: " + policy);
+        System.out.println("[SchedulerManager] Política: " + policy);
     }
 
-    // ===================== Admisión de procesos =====================
+    // ===================== Admisión =====================
 
     /**
-     * Punto de entrada único para admitir procesos al sistema.
-     * El MTS decide si va directo a memoria o al swap.
+     * Punto de entrada único para admitir procesos.
+     * Si la memoria está llena, suspende al menos urgente antes de admitir.
      */
     public void admitProcess(PCB process) {
         if (process == null) return;
 
-        // Notificar al MTS que entra un proceso nuevo
-        // Si la memoria está llena, el MTS llamará a forceSwapOut
-        // sobre el candidato menos urgente
-        int currentInMemory = mts.getProcessesInMemory();
-        int maxInMemory     = mts.getMaxProcessesInMemory();
+        int inMemory = mts.getProcessesInMemory();
+        int maxMem   = mts.getMaxProcessesInMemory();
 
-        if (currentInMemory >= maxInMemory) {
-            // Memoria llena: el proceso nuevo va directo al swap
-            process.changeState(ProcessState.READY_SUSPENDED);
-            mts.getReadySuspendedList().agregarAlFinal(process);
-            System.out.println("[SchedulerManager] Memoria llena → "
-                    + process.getProcessName() + " va a READY_SUSPENDED");
-        } else {
-            // Hay espacio: admitir al scheduler activo
-            admitToActiveScheduler(process);
-            mts.notifyProcessAdmitted(process, clock.getCurrentCycle());
+        if (inMemory >= maxMem) {
+            // Buscar el menos urgente en la cola del scheduler activo y suspenderlo
+            PCB toSuspend = findLeastUrgentInReady();
+            if (toSuspend != null) {
+                removeFromActiveScheduler(toSuspend);
+                mts.suspendProcess(toSuspend, clock.getCurrentCycle());
+            }
         }
+
+        // Admitir el proceso nuevo al scheduler activo
+        admitToActiveScheduler(process);
+        mts.notifyProcessAdmitted(clock.getCurrentCycle());
     }
 
     /**
-     * Delega la admisión al scheduler de corto plazo activo.
+     * Busca el proceso menos urgente (mayor deadline) en la cola de listos.
+     * Cada scheduler expone su lista para que podamos consultarla.
      */
+    private PCB findLeastUrgentInReady() {
+        PCB worst = null;
+        int maxDeadline = Integer.MIN_VALUE;
+
+        Estructuras.Nodo<PCB> head = getReadyHead();
+        if (head == null) return null;
+
+        for (Estructuras.Nodo<PCB> node = head; node != null; node = node.getSiguiente()) {
+            PCB p = node.getDato();
+            if (p.getRemainingDeadline() > maxDeadline) {
+                maxDeadline = p.getRemainingDeadline();
+                worst = p;
+            }
+        }
+        return worst;
+    }
+
+    private Estructuras.Nodo<PCB> getReadyHead() {
+        switch (activePolicy) {
+            case FCFS:        return null; // Cola no tiene getCabeza, se maneja distinto
+            case ROUND_ROBIN: return null;
+            case SRT:         return ((SRT) activeScheduler).getReadyList().getCabeza();
+            case PEP:         return ((PEP) activeScheduler).getReadyList().getCabeza();
+            case EDF:         return ((EDF) activeScheduler).getReadyList().getCabeza();
+            default:          return null;
+        }
+    }
+
+    private Iterable<PCB> getReadyIterable() { return null; } // No se usa, ver getReadyHead
+
+    /**
+     * Elimina un proceso de la cola del scheduler activo
+     * (para poder suspenderlo).
+     */
+    private void removeFromActiveScheduler(PCB process) {
+        switch (activePolicy) {
+            case SRT: ((SRT) activeScheduler).getReadyList().eliminar(process); break;
+            case PEP: ((PEP) activeScheduler).getReadyList().eliminar(process); break;
+            case EDF: ((EDF) activeScheduler).getReadyList().eliminar(process); break;
+            // FCFS y RR usan Cola que no tiene eliminar por referencia directamente
+            // para ellos el swap out se omite por ahora
+            default: break;
+        }
+    }
+
     private void admitToActiveScheduler(PCB process) {
         switch (activePolicy) {
             case FCFS:        ((FCFS)       activeScheduler).admitProcess(process); break;
@@ -110,41 +151,12 @@ public class SchedulerManager implements MediumTermScheduler.SwapInCallback {
         }
     }
 
-    // ===================== SwapInCallback =====================
+    // ===================== Notificaciones =====================
 
-    /**
-     * El MTS llama esto cuando hace swap in de un proceso suspendido.
-     * Si el proceso quedó en READY, lo readmitimos al scheduler activo.
-     * Si quedó en BLOCKED, el scheduler lo manejará cuando termine su E/S.
-     */
-    @Override
-    public void onSwapIn(PCB process) {
-        if (process.getCurrentState() == ProcessState.READY) {
-            admitToActiveScheduler(process);
-        }
-        // Si es BLOCKED, el scheduler de corto plazo lo verá en su lista
-        // de bloqueados cuando procese la E/S
-    }
-
-    // ===================== Notificaciones de ciclo de vida =====================
-
-    /**
-     * Llamar cuando un proceso termina (TERMINATED) o es eliminado.
-     */
     public void notifyProcessFinished() {
         mts.notifyProcessRemoved(clock.getCurrentCycle());
     }
 
-    /**
-     * Llamar cuando un proceso se bloquea por E/S.
-     */
-    public void notifyProcessBlocked(PCB process) {
-        mts.notifyProcessBlocked(process);
-    }
-
-    /**
-     * Notifica que un proceso terminó su E/S (BLOCKED → READY).
-     */
     public void onProcessUnblocked(PCB process) {
         switch (activePolicy) {
             case FCFS:        ((FCFS)       activeScheduler).onProcessUnblocked(process); break;
@@ -155,7 +167,7 @@ public class SchedulerManager implements MediumTermScheduler.SwapInCallback {
         }
     }
 
-    // ===================== Getters para la UI =====================
+    // ===================== Getters para UI =====================
 
     public PCB getRunningProcess() {
         switch (activePolicy) {
@@ -190,17 +202,15 @@ public class SchedulerManager implements MediumTermScheduler.SwapInCallback {
         }
     }
 
-    public MediumTermScheduler getMTS()          { return mts; }
-    public Policy getActivePolicy()              { return activePolicy; }
-    public ClockListener getActiveScheduler()    { return activeScheduler; }
-    public int getQuantum()                      { return quantum; }
+    public Mediumtermscheduler getMTS()       { return mts; }
+    public Policy getActivePolicy()           { return activePolicy; }
+    public ClockListener getActiveScheduler() { return activeScheduler; }
+    public int getQuantum()                   { return quantum; }
 
     public void setQuantum(int q) {
         this.quantum = Math.max(1, q);
         if (activePolicy == Policy.ROUND_ROBIN) setPolicy(Policy.ROUND_ROBIN);
     }
-
-    // ===================== Reset =====================
 
     public void reset() {
         if (activeScheduler != null) {
@@ -213,6 +223,5 @@ public class SchedulerManager implements MediumTermScheduler.SwapInCallback {
             }
         }
         mts.reset();
-        System.out.println("[SchedulerManager] Reiniciado.");
     }
 }
