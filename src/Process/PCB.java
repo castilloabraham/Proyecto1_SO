@@ -52,44 +52,6 @@ public class PCB {
      * @param processName Nombre descriptivo del proceso
      * @param totalInstructions Número total de instrucciones
      * @param instructionType Tipo de instrucciones (CPU o IO)
-     * @param processType Tipo de proceso (PERIODIC o APERIODIC)
-     */
-    public PCB(String processName, int totalInstructions, InstructionType instructionType, ProcessType processType) {
-        
-        // Generar ID único
-        this.processID = ProcessIDGenerator.getInstance().generateID();
-        
-        // Información básica
-        this.processName = processName;
-        this.totalInstructions = totalInstructions;
-        this.instructionType = instructionType;
-        this.processType = processType;
-        
-        // Estado inicial
-        this.currentState = ProcessState.NEW;
-        this.programCounter = 0;
-        this.memoryAddressRegister = 0;
-        
-        // Inicialización de contadores
-        this.currentIOCycles = 0;
-        
-        // Flags iniciales
-        this.isBlockedForIO = false;
-        this.missedDeadline = false;
-        this.isSuspended = false;
-        this.completionTime = -1;
-        
-        // Valores por defecto para E/S
-        this.cyclesUntilIOException = 0;
-        this.cyclesForIOCompletion = 0;
-    }
-    
-    /**
-     * Constructor principal del PCB.
-     * 
-     * @param processName Nombre descriptivo del proceso
-     * @param totalInstructions Número total de instrucciones
-     * @param instructionType Tipo de instrucciones (CPU o IO)
      * @param priority Prioridad (1 = alta)
      * @param deadline Deadline en ciclos de reloj
      * @param processType Tipo de proceso (PERIODIC o APERIODIC)
@@ -191,6 +153,222 @@ public class PCB {
     public void setTurnaroundTime(int turnaroundTime) {this.turnaroundTime = turnaroundTime;}
     
     
+    // Metodos de actualizacion de estados
     
+    /**
+     * Avanza el proceso en un ciclo de ejecución.
+     * Incrementa PC, MAR y actualiza contadores según el proyecto.
+     * 
+     * @return true si el proceso completó todas sus instrucciones
+     */
+    public boolean executeOneCycle() {
+        if (currentState != ProcessState.RUNNING) {
+            return false;
+        }
+        
+        // Incrementar registros (según simplificación: 1 instrucción por ciclo)
+        programCounter++;
+        memoryAddressRegister++;
+        cpuTimeUsed++;
+        
+        // Verificar si completó todas las instrucciones
+        if (programCounter >= totalInstructions) {
+            currentState = ProcessState.TERMINATED;
+            return true;
+        }
+        
+        // Si es proceso con E/S, verificar si debe bloquearse
+        if (instructionType == InstructionType.IO && cyclesUntilIOException > 0) {
+            if (programCounter % cyclesUntilIOException == 0) {
+                // Generar excepción de E/S
+                isBlockedForIO = true;
+                currentIOCycles = 0;
+                return false;
+            }
+        }
+        
+        return false;
+    }
+    
+    /**
+     * Procesa un ciclo de E/S cuando el proceso está bloqueado.
+     * 
+     * @return true si la operación de E/S terminó
+     */
+    public boolean processIOCycle() {
+        if (!isBlockedForIO) {
+            return false;
+        }
+        
+        currentIOCycles++;
+        
+        if (currentIOCycles >= cyclesForIOCompletion) {
+            // E/S completada
+            isBlockedForIO = false;
+            currentIOCycles = 0;
+            return true;
+        }
+        
+        return false;
+    }
+    
+    /**
+     * Decrementa el deadline restante (se llama cada ciclo de reloj global).
+     */
+    public void decrementDeadline() {
+        if (currentState.isActive()) {
+            remainingDeadline--;
+            
+            // Verificar si perdió el deadline
+            if (remainingDeadline <= 0 && currentState != ProcessState.TERMINATED) {
+                missedDeadline = true;
+            }
+        }
+    }
+    
+    /**
+     * Incrementa el tiempo de espera (se llama cuando está en cola de listos).
+     */
+    public void incrementWaitingTime() {
+        if (currentState == ProcessState.READY || 
+            currentState == ProcessState.READY_SUSPENDED) {
+            waitingTime++;
+        }
+    }
+    
+    /**
+     * Decrementa el quantum restante (usado en Round Robin).
+     * 
+     * @return true si el quantum se agotó
+     */
+    public boolean decrementQuantum() {
+        if (remainingQuantum > 0) {
+            remainingQuantum--;
+            return remainingQuantum == 0;
+        }
+        return false;
+    }
+    
+    /**
+     * Resetea el quantum al valor especificado.
+     * 
+     * @param quantum Nuevo valor del quantum
+     */
+    public void resetQuantum(int quantum) {
+        this.remainingQuantum = quantum;
+    }
+    
+    // Transiciones de estado
+    
+    /**
+     * Cambia el estado del proceso.
+     * Valida transiciones legales según el modelo de estados.
+     * 
+     * @param newState Nuevo estado
+     * @return true si la transición fue exitosa
+     */
+    public boolean changeState(ProcessState newState) {
+        // Validar transición (se puede extender con lógica más compleja)
+        if (isValidTransition(currentState, newState)) {
+            this.currentState = newState;
+            
+            // Actualizar flags según el nuevo estado
+            if (newState == ProcessState.TERMINATED) {
+                completionTime = arrivalTime + turnaroundTime;
+            }
+            
+            if (newState.isSuspended()) {
+                isSuspended = true;
+            } else if (newState.isInMainMemory()) {
+                isSuspended = false;
+            }
+            
+            return true;
+        }
+        
+        return false;
+    }
+    
+    /**
+     * Valida si una transición de estado es legal
+     * 
+     * @param from Estado origen
+     * @param to Estado destino
+     * @return true si la transición es válida
+     */
+    private boolean isValidTransition(ProcessState from, ProcessState to) {
+        // Todas las transiciones desde NEW
+        if (from == ProcessState.NEW) {
+            return to == ProcessState.READY || to == ProcessState.READY_SUSPENDED;
+        }
+        
+        // Desde READY
+        if (from == ProcessState.READY) {
+            return to == ProcessState.RUNNING || to == ProcessState.READY_SUSPENDED;
+        }
+        
+        // Desde RUNNING
+        if (from == ProcessState.RUNNING) {
+            return to == ProcessState.READY || to == ProcessState.BLOCKED || 
+                   to == ProcessState.TERMINATED;
+        }
+        
+        // Desde BLOCKED
+        if (from == ProcessState.BLOCKED) {
+            return to == ProcessState.READY || to == ProcessState.BLOCKED_SUSPENDED;
+        }
+        
+        // Desde estados suspendidos
+        if (from == ProcessState.READY_SUSPENDED) {
+            return to == ProcessState.READY;
+        }
+        
+        if (from == ProcessState.BLOCKED_SUSPENDED) {
+            return to == ProcessState.BLOCKED || to == ProcessState.READY_SUSPENDED;
+        }
+        
+        // TERMINATED es final
+        if (from == ProcessState.TERMINATED) {
+            return false;
+        }
+        
+        return false;
+    }
+    
+    // Metodos de consulta
+    
+    /**
+     * Verifica si el proceso ha terminado todas sus instrucciones.
+     */
+    public boolean isCompleted() {
+        return programCounter >= totalInstructions;
+    }
+    
+    /**
+     * Calcula el progreso del proceso como porcentaje
+     * 
+     * @return Porcentaje completado (0.0 a 100.0)
+     */
+    public double getProgressPercentage() {
+        if (totalInstructions == 0) return 100.0;
+        return (programCounter * 100.0) / totalInstructions;
+    }
+    
+    /**
+     * Obtiene las instrucciones restantes
+     */
+    public int getRemainingInstructions() {
+        return Math.max(0, totalInstructions - programCounter);
+    }
+    
+    /**
+     * Verifica si el proceso está cerca de su deadline
+     * 
+     * @param threshold Umbral en ciclos
+     * @return true si el deadline está próximo
+     */
+    public boolean isDeadlineClose(int threshold) {
+        return remainingDeadline <= threshold && remainingDeadline > 0;
+    }
     
 }
