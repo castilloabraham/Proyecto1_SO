@@ -148,6 +148,7 @@ public class PEP implements ClockListener {
         if (process.isMissedDeadline()) {
             missedDeadlines++;
             System.out.println("[PEP] !! Fallo de Deadline: " + process.getProcessName());
+            Interfaces.InterfazHome.logEvento("[Deadline] Fallo de Deadline en Proceso " + process.getProcessName() + " [" + process.getProcessID() + "]");
         }
         System.out.println("[PEP] Terminado: " + process.getProcessName()
                 + " | Espera=" + process.getWaitingTime());

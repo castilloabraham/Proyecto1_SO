@@ -70,26 +70,36 @@ public class SchedulerManager {
 
     /**
      * Punto de entrada único para admitir procesos.
-     * Si la memoria está llena, suspende al menos urgente antes de admitir.
+     * Si la memoria está llena, intenta suspender al menos urgente UNA sola vez.
+     * Si no hay candidato, el nuevo proceso va directo a suspendido.
      */
     public void admitProcess(PCB process) {
         if (process == null) return;
 
-        int inMemory = mts.getProcessesInMemory();
-        int maxMem   = mts.getMaxProcessesInMemory();
-
-        if (inMemory >= maxMem) {
-            // Buscar el menos urgente en la cola del scheduler activo y suspenderlo
+        if (mts.getProcessesInMemory() >= mts.getMaxProcessesInMemory()) {
+            PCB running = getRunningProcess();
             PCB toSuspend = findLeastUrgentInReady();
-            if (toSuspend != null) {
+
+            if (toSuspend != null && toSuspend != running) {
                 removeFromActiveScheduler(toSuspend);
                 mts.suspendProcess(toSuspend, clock.getCurrentCycle());
+                // LOG: proceso movido a suspendido
+                Interfaces.InterfazHome.logEvento("[MTS] Proceso " + toSuspend.getProcessName() +
+                    " movido a Listo-Suspendido (memoria llena)");
+                admitToActiveScheduler(process);
+                mts.notifyProcessAdmitted(clock.getCurrentCycle());
+            } else {
+                // Sin candidato: nuevo proceso va a READY_SUSPENDED
+                process.changeState(ProcessState.READY);
+                process.changeState(ProcessState.READY_SUSPENDED);
+                mts.getReadySuspendedList().agregarAlFinal(process);
+                Interfaces.InterfazHome.logEvento("[MTS] Proceso " + process.getProcessName() +
+                    " enviado directo a Listo-Suspendido (sin candidato)");
             }
+        } else {
+            admitToActiveScheduler(process);
+            mts.notifyProcessAdmitted(clock.getCurrentCycle());
         }
-
-        // Admitir el proceso nuevo al scheduler activo
-        admitToActiveScheduler(process);
-        mts.notifyProcessAdmitted(clock.getCurrentCycle());
     }
 
     /**
@@ -103,8 +113,11 @@ public class SchedulerManager {
         Estructuras.Nodo<PCB> head = getReadyHead();
         if (head == null) return null;
 
+        PCB running = getRunningProcess(); // No suspender el que está en CPU
+
         for (Estructuras.Nodo<PCB> node = head; node != null; node = node.getSiguiente()) {
             PCB p = node.getDato();
+            if (p == running) continue; // Saltar el proceso en CPU
             if (p.getRemainingDeadline() > maxDeadline) {
                 maxDeadline = p.getRemainingDeadline();
                 worst = p;
@@ -115,11 +128,11 @@ public class SchedulerManager {
 
     private Estructuras.Nodo<PCB> getReadyHead() {
         switch (activePolicy) {
-            case FCFS:        return null; // Cola no tiene getCabeza, se maneja distinto
-            case ROUND_ROBIN: return null;
-            case SRT:         return ((SRT) activeScheduler).getReadyList().getCabeza();
-            case PEP:         return ((PEP) activeScheduler).getReadyList().getCabeza();
-            case EDF:         return ((EDF) activeScheduler).getReadyList().getCabeza();
+            case FCFS:        return ((FCFS)       activeScheduler).getReadyQueue().getFrente();
+            case ROUND_ROBIN: return ((RoundRobin) activeScheduler).getReadyQueue().getFrente();
+            case SRT:         return ((SRT)        activeScheduler).getReadyList().getCabeza();
+            case PEP:         return ((PEP)        activeScheduler).getReadyList().getCabeza();
+            case EDF:         return ((EDF)        activeScheduler).getReadyList().getCabeza();
             default:          return null;
         }
     }
@@ -135,13 +148,11 @@ public class SchedulerManager {
             case SRT: ((SRT) activeScheduler).getReadyList().eliminar(process); break;
             case PEP: ((PEP) activeScheduler).getReadyList().eliminar(process); break;
             case EDF: ((EDF) activeScheduler).getReadyList().eliminar(process); break;
-            // FCFS y RR usan Cola que no tiene eliminar por referencia directamente
-            // para ellos el swap out se omite por ahora
-            default: break;
+            default: break; // ← FCFS y RR no tienen eliminar, el swap-out no funciona para ellos
         }
     }
 
-    private void admitToActiveScheduler(PCB process) {
+    public void admitToActiveScheduler(PCB process) {
         switch (activePolicy) {
             case FCFS:        ((FCFS)       activeScheduler).admitProcess(process); break;
             case ROUND_ROBIN: ((RoundRobin) activeScheduler).admitProcess(process); break;

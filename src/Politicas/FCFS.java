@@ -118,12 +118,14 @@ public class FCFS implements ClockListener {
         completedCount++;
         if (process.isMissedDeadline()) {
             missedDeadlines++;
-            System.out.println("[FCFS] !! Fallo de Deadline: " + process.getProcessName());
+            Interfaces.InterfazHome.logEvento("[Deadline] Fallo de Deadline en Proceso " 
+                + process.getProcessName() + " [" + process.getProcessID() + "]");
         }
-        System.out.println("[FCFS] Terminado: " + process.getProcessName()
-                + " | Espera=" + process.getWaitingTime());
-    }
+        System.out.println("[FCFS] Terminado: " + process.getProcessName());
 
+        
+        Interfaces.InterfazHome.schedulerManager.notifyProcessFinished();
+    }
     /**
      * Notifica que un proceso bloqueado terminó su E/S (BLOCKED → READY).
      */
@@ -224,5 +226,9 @@ public class FCFS implements ClockListener {
         missedDeadlines = 0;
     }
     
+    public Cola<PCB> getReadyQueue() {
+        return readyQueue;
+    }
+
     
 }

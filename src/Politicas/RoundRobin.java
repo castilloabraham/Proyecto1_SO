@@ -261,5 +261,8 @@ public class RoundRobin implements ClockListener {
         return snap;
     }
 
-    
+    public Cola<PCB> getReadyQueue() {
+        return readyQueue;
+    }
+
 }

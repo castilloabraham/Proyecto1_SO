@@ -152,6 +152,7 @@ public class EDF implements ClockListener {
         if (process.isMissedDeadline()) {
             missedDeadlines++;
             System.out.println("[EDF] !! Fallo de Deadline: " + process.getProcessName());
+            Interfaces.InterfazHome.logEvento("[Deadline] Fallo de Deadline en Proceso " + process.getProcessName() + " [" + process.getProcessID() + "]");
         }
         System.out.println("[EDF] Terminado: " + process.getProcessName()
                 + " | Espera=" + process.getWaitingTime());

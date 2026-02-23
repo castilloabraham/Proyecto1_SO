@@ -150,6 +150,7 @@ public class SRT implements ClockListener {
         if (process.isMissedDeadline()) {
             missedDeadlines++;
             System.out.println("[SRT] !! Fallo de Deadline: " + process.getProcessName());
+            Interfaces.InterfazHome.logEvento("[Deadline] Fallo de Deadline en Proceso " + process.getProcessName() + " [" + process.getProcessID() + "]");
         }
         System.out.println("[SRT] Terminado: " + process.getProcessName()
                 + " | Espera=" + process.getWaitingTime());

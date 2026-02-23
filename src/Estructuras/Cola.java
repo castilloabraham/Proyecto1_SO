@@ -89,4 +89,10 @@ public class Cola<T> {
         fondo = null;
         size = 0;
     }
+
+    public Nodo<T> getFrente() {
+        return frente;
+    }
+    
+    
 }

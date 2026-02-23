@@ -219,9 +219,10 @@ public class SystemClock extends Thread {
             
             // Notificar a listeners
             synchronized (listenersLock) {
-                for (ClockListener listener : listeners) {
+                for (int i = 0; i < listenerCount; i++) {
+                    if (listeners[i] == null) continue;
                     try {
-                        listener.onClockPaused(cycle);
+                        listeners[i].onClockPaused(cycle);
                     } catch (Exception e) {
                         System.err.println("SystemClock: Error notificando pausa: " + e.getMessage());
                     }
@@ -241,9 +242,10 @@ public class SystemClock extends Thread {
             
             // Notificar a listeners
             synchronized (listenersLock) {
-                for (ClockListener listener : listeners) {
+                for (int i = 0; i < listenerCount; i++) {
+                    if (listeners[i] == null) continue;
                     try {
-                        listener.onClockResumed(cycle);
+                        listeners[i].onClockResumed(cycle);
                     } catch (Exception e) {
                         System.err.println("SystemClock: Error notificando reanudación: " + e.getMessage());
                     }
@@ -284,9 +286,10 @@ public class SystemClock extends Thread {
         
         // Notificar reset a listeners
         synchronized (listenersLock) {
-            for (ClockListener listener : listeners) {
+            for (int i = 0; i < listenerCount; i++) {
+                if (listeners[i] == null) continue;
                 try {
-                    listener.onClockReset();
+                    listeners[i].onClockReset();
                 } catch (Exception e) {
                     System.err.println("SystemClock: Error notificando reset: " + e.getMessage());
                 }

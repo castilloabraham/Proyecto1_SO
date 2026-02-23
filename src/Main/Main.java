@@ -4,7 +4,7 @@
  */
 package Main;
 
-import Interfaces.Ventana;
+import Interfaces.InterfazHome;
 import javax.swing.SwingUtilities;
 
 /**
@@ -17,10 +17,8 @@ public class Main {
      * @param args the command line arguments
      */
     public static void main(String[] args) {
-        SwingUtilities.invokeLater(() -> {
-            Ventana ventana = new Ventana();
-            ventana.setVisible(true);
-        });
+        InterfazHome ventana = new InterfazHome();
+        ventana.setVisible(true);
     }
     
 }

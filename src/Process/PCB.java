@@ -216,10 +216,8 @@ public class PCB {
      * Decrementa el deadline restante (se llama cada ciclo de reloj global).
      */
     public void decrementDeadline() {
-        if (currentState.isActive()) {
+        if (currentState.isActive() && !currentState.isSuspended()) {
             remainingDeadline--;
-            
-            // Verificar si perdió el deadline
             if (remainingDeadline <= 0 && currentState != ProcessState.TERMINATED) {
                 missedDeadline = true;
             }
@@ -370,5 +368,8 @@ public class PCB {
     public boolean isDeadlineClose(int threshold) {
         return remainingDeadline <= threshold && remainingDeadline > 0;
     }
+    
+    
+    public String getProcessID() { return processID; }
     
 }

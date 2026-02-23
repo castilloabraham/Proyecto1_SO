@@ -8,8 +8,7 @@ import Estructuras.Lista;
 import Estructuras.Nodo;
 import clock.ClockListener;
 import clock.ResourceManager;
-import Process.PCB;
-
+import java.util.concurrent.atomic.AtomicInteger;
 
 /**
  *
@@ -22,11 +21,8 @@ public class Mediumtermscheduler implements ClockListener {
 
     private int maxProcessesInMemory;
     private static final int DEFAULT_MAX = 5;
-    private int processesInMemory;
+    private final AtomicInteger processesInMemory = new AtomicInteger(0);
 
-    // Referencia directa al SchedulerManager para swap in
-    // Se usa Object para evitar dependencia circular en la compilación.
-    // Se llama via reflexión o se castea — ver setSchedulerManager().
     private Object schedulerManager;
 
     private final ResourceManager rm;
@@ -47,57 +43,54 @@ public class Mediumtermscheduler implements ClockListener {
         this(DEFAULT_MAX);
     }
 
-    /**
-     * Inyecta el SchedulerManager después de construirlo.
-     * Se llama desde el propio SchedulerManager en su constructor.
-     */
     public void setSchedulerManager(Object sm) {
         this.schedulerManager = sm;
     }
 
     // ===================== API pública =====================
 
-    /**
-     * El SchedulerManager llama esto cada vez que admite un proceso a memoria.
-     */
     public void notifyProcessAdmitted(int cycle) {
-        processesInMemory++;
-        System.out.println("[MTS] Procesos en memoria: " + processesInMemory
+        processesInMemory.incrementAndGet();
+        System.out.println("[MTS] Procesos en memoria: " + processesInMemory.get()
                 + "/" + maxProcessesInMemory);
     }
 
-    /**
-     * El SchedulerManager llama esto cuando un proceso termina o se elimina.
-     */
     public void notifyProcessRemoved(int cycle) {
-        processesInMemory = Math.max(0, processesInMemory - 1);
-        if (processesInMemory < maxProcessesInMemory && hasSuspendedProcesses()) {
+        processesInMemory.updateAndGet(v -> Math.max(0, v - 1));
+        if (processesInMemory.get() < maxProcessesInMemory && hasSuspendedProcesses()) {
             swapIn(cycle);
         }
     }
 
-    /**
-     * Suspende un proceso específico (llamado desde SchedulerManager
-     * cuando la memoria está llena y ya eligió al candidato).
-     */
     public void suspendProcess(PCB process, int cycle) {
+        if (process.getCurrentState() == ProcessState.RUNNING) {
+            System.out.println("[MTS] No se suspende proceso en CPU: " + process.getProcessName());
+            return;
+        }
+        if (process.getCurrentState() == ProcessState.READY_SUSPENDED) return;
+        if (process.getCurrentState() == ProcessState.BLOCKED_SUSPENDED) return;
+
         ProcessState state = process.getCurrentState();
+
+        if (state == ProcessState.NEW) {
+            process.changeState(ProcessState.READY);
+            state = ProcessState.READY;
+        }
+
         if (state == ProcessState.BLOCKED) {
             process.changeState(ProcessState.BLOCKED_SUSPENDED);
             blockedSuspendedList.agregarAlFinal(process);
-            processesInMemory = Math.max(0, processesInMemory - 1);
+            processesInMemory.updateAndGet(v -> Math.max(0, v - 1));
             swapOutCount++;
-            System.out.println("[MTS][T=" + cycle + "] Swap OUT (bloqueado): "
-                    + process.getProcessName()
-                    + " | Deadline: " + process.getRemainingDeadline());
+            System.out.println("[MTS][T=" + cycle + "] Swap OUT (BLOQUEADO→SUSPENDIDO): " + process.getProcessName());
         } else if (state == ProcessState.READY) {
             process.changeState(ProcessState.READY_SUSPENDED);
             readySuspendedList.agregarAlFinal(process);
-            processesInMemory = Math.max(0, processesInMemory - 1);
+            processesInMemory.updateAndGet(v -> Math.max(0, v - 1));
             swapOutCount++;
-            System.out.println("[MTS][T=" + cycle + "] Swap OUT (listo): "
-                    + process.getProcessName()
-                    + " | Deadline: " + process.getRemainingDeadline());
+            System.out.println("[MTS][T=" + cycle + "] Swap OUT (LISTO→SUSPENDIDO): " + process.getProcessName());
+        } else {
+            System.out.println("[MTS] No se puede suspender proceso en estado: " + state + " | " + process.getProcessName());
         }
     }
 
@@ -106,7 +99,7 @@ public class Mediumtermscheduler implements ClockListener {
     @Override
     public void onClockTick(int currentCycle) {
         processBlockedSuspendedIO(currentCycle);
-        if (processesInMemory < maxProcessesInMemory && hasSuspendedProcesses()) {
+        if (processesInMemory.get() < maxProcessesInMemory && hasSuspendedProcesses()) {
             swapIn(currentCycle);
         }
     }
@@ -120,42 +113,34 @@ public class Mediumtermscheduler implements ClockListener {
     // ===================== Swap In =====================
 
     private void swapIn(int cycle) {
-        // Primero READY_SUSPENDED → va directo a READY
         PCB candidate = findMostUrgent(readySuspendedList);
         if (candidate != null) {
             rm.acquireReadySuspended();
             readySuspendedList.eliminar(candidate);
             rm.releaseReadySuspended();
-
             candidate.changeState(ProcessState.READY);
-            processesInMemory++;
+            processesInMemory.incrementAndGet();
             swapInCount++;
             System.out.println("[MTS][T=" + cycle + "] Swap IN (→ listo): "
                     + candidate.getProcessName()
                     + " | Deadline: " + candidate.getRemainingDeadline());
-
-            // Avisar al SchedulerManager directamente
             if (schedulerManager instanceof Politicas.SchedulerManager) {
-                ((Politicas.SchedulerManager) schedulerManager).admitProcess(candidate);
+                ((Politicas.SchedulerManager) schedulerManager).admitToActiveScheduler(candidate);
             }
             return;
         }
 
-        // BLOCKED_SUSPENDED → vuelve a BLOCKED
         candidate = findMostUrgent(blockedSuspendedList);
         if (candidate != null) {
             rm.acquireBlockedSuspended();
             blockedSuspendedList.eliminar(candidate);
             rm.releaseBlockedSuspended();
-
             candidate.changeState(ProcessState.BLOCKED);
-            processesInMemory++;
+            processesInMemory.incrementAndGet();
             swapInCount++;
             System.out.println("[MTS][T=" + cycle + "] Swap IN (→ bloqueado): "
                     + candidate.getProcessName()
                     + " | Deadline: " + candidate.getRemainingDeadline());
-
-            // El scheduler lo manejará cuando termine su E/S
             if (schedulerManager instanceof Politicas.SchedulerManager) {
                 ((Politicas.SchedulerManager) schedulerManager).onProcessUnblocked(candidate);
             }
@@ -217,7 +202,7 @@ public class Mediumtermscheduler implements ClockListener {
     public int getSwapOutCount()                 { return swapOutCount; }
     public int getSwapInCount()                  { return swapInCount; }
     public int getMaxProcessesInMemory()         { return maxProcessesInMemory; }
-    public int getProcessesInMemory()            { return processesInMemory; }
+    public int getProcessesInMemory()            { return processesInMemory.get(); }
 
     public void setMaxProcessesInMemory(int max) {
         this.maxProcessesInMemory = Math.max(1, max);
@@ -226,9 +211,9 @@ public class Mediumtermscheduler implements ClockListener {
     public void reset() {
         while (!readySuspendedList.estaVacia())   readySuspendedList.eliminar(0);
         while (!blockedSuspendedList.estaVacia()) blockedSuspendedList.eliminar(0);
-        processesInMemory = 0;
-        swapOutCount      = 0;
-        swapInCount       = 0;
+        processesInMemory.set(0);
+        swapOutCount = 0;
+        swapInCount  = 0;
         System.out.println("[MTS] Reiniciado.");
     }
 }
